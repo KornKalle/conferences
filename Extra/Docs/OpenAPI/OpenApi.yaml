@@ -1,0 +1,302 @@
+openapi: 3.0.0
+info:
+  title: HZB Conferences API
+  description: REST API for Jitsi to SIP Room and Reservation Management
+  version: 0.1.4
+servers:
+  - url: 'https://conf.basisit.de/api'
+    description: Production API
+  - url: 'https://conf-test.basisit.de/api'
+    description: Staging API
+paths:
+  /conference:
+    post:
+      summary: checks if a room exists at the reservation backend and opens it on jitsi
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                name:
+                  required: true
+                  description: jitsiRoomName
+                  example: testRoom
+                start_time:
+                  required: true
+                  example: 2048-04-20T17%3A55%3A12.000Z
+                  description: gets ignored on our side, but jitsi needs it
+                mail_owner:
+                  required: false
+      responses:
+        '200':
+          description: conference object, following jitsi documentation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conference'
+        '403':
+          description: Error code if room can not be opened right now
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Error message for user
+  /room/create:
+    post:
+      summary: creates a new temporary room
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                jitsiRoomName:
+                  required: true
+                  type: string
+                openingAt:
+                  required: true
+                  type: string
+                  format: date-time
+                  example: 2020-05-11T11:50:56Z
+                closingAt:
+                  required: true
+                  type: date
+                  format: date-time
+                  example: 2021-05-11T11:50:56Z
+      responses:
+        '200':
+          description: Room Object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+  /room/create/permanent:
+    post:
+      summary: creates a permanent room
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                jitsiRoomName:
+                  required: true
+                  type: string
+      responses:
+        '200':
+          description: Room Object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+  /room/create/remote:
+    post:
+      summary: creates a room via API Key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                jitsiRoomName:
+                  required: true
+                  type: string
+                openingAt:
+                  required: true
+                  type: string
+                  format: date-time
+                  example: 2020-05-11T11:50:56Z
+                closingAt:
+                  required: true
+                  type: date
+                  format: date-time
+                  example: 2021-05-11T11:50:56Z
+                createdByUid:
+                  required: true
+                  type: string
+                  example: abc
+      responses:
+        '200':
+          description: Room Object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+  /room/edit:
+    put:
+      summary: edits an already existing room
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  required: true
+                  type: integer
+                  example: 4
+                jitsiRoomName:
+                  required: true
+                  type: string
+                openingAt:
+                  required: true
+                  type: string
+                  format: date-time
+                  example: 2020-05-11T11:50:56Z
+                closingAt:
+                  required: true
+                  type: date
+                  format: date-time
+                  example: 2021-05-11T11:50:56Z
+      responses:
+        '200':
+          description: Room Object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+  /room/get:
+    get:
+      summary: gets all rooms for user
+      responses:
+        '200':
+          description: Array of Room objects
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+  /room/get/${id}:
+    get:
+      summary: gets a certain room if user matches
+      responses:
+        '200':
+          description: Room Object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+  /room/getByPin/{pin}:
+    get:
+      summary: gets room object for pin if existing and room valid
+      parameters:
+        - in: header
+          name: X-API-KEY
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                createdByUid:
+                  required: true
+                  type: string
+                  example: jon.doe
+      responses:
+        '200':
+          description: Array of Room objects
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+        '400':
+          description: pin is wrong or expired
+        '401':
+          description: Api Key is invalid, expired or not authorized for this action
+  /room/get/remote:
+    post:
+      summary: gets room object Array for user
+      parameters:
+        - in: header
+          name: X-API-KEY
+      responses:
+        '200':
+          description: Room object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+        '400':
+          description: pin is wrong or expired
+        '401':
+          description: Api Key is invalid, expired or not authorized for this action
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Conference:
+      type: object
+      properties:
+        application/json:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 4
+            start_time:
+              type: date
+              format: yyyy-MM-dd'T'HH:mm:ss.SSSX
+            duration:
+              type: integer
+              example: 9000000
+              description: duration of meeting in seconds
+    Room:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            id:
+              type: integer
+              format: int64
+              example: 4
+            pin:
+              type: integer
+              format: int64
+              minLength: 6
+              example: 123456
+            createdAt:
+              type: string
+              format: date-time
+              example: 2020-05-11T11:50:56Z
+            openingAt:
+              type: string
+              format: date-time
+              example: 2020-05-11T11:50:56Z
+            createdByUid:
+              type: string
+              description: LDAP username of creator
+            type:
+              type: object
+              properties:
+                enumType:
+                  type: string
+                  description: Classname of enum subclass
+                name:
+                  type: string
+                  enum:
+                    - TEMPORARY
+                    - PERMANENT
+            closingAt:
+              type: date
+              format: date-time
+              example: 2021-05-11T11:50:56Z
+            link:
+              type: string
+              example: https://jitsi-test.helmholtz-berlin.de/foo
+        errors:
+          type: array
